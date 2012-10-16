@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+    <head>
+        <script src="simpleworker.js"></script>
+    </head>
+    <body>
+        <script>
+            var sum = 0;
+            var count = 4;
+            for(var i = 1; i <= 1e8; i+=2.5e7) {
+                $worker(function(from, to) {
+                    var sum = 0;
+                    for(var i = from; i <= to; i ++) {
+                        sum += i;
+                    }
+                    return sum;
+                }, [i, i + 2.5e7 - 1])
+                .then(function(ret) {
+                    sum += ret;
+                    if (--count === 0) {
+                        console.log(sum);
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>
