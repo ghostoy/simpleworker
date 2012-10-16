@@ -5,23 +5,19 @@
     </head>
     <body>
         <script>
-            var sum = 0;
-            var count = 4;
+            var data = [];
             for(var i = 1; i <= 1e8; i+=2.5e7) {
-                $worker(function(from, to) {
-                    var sum = 0;
-                    for(var i = from; i <= to; i ++) {
-                        sum += i;
-                    }
-                    return sum;
-                }, [i, i + 2.5e7 - 1])
-                .then(function(ret) {
-                    sum += ret;
-                    if (--count === 0) {
-                        console.log(sum);
-                    }
-                });
+                data.push([i, i + 2.5e7 - 1]);
             }
+            $map(data, function(d) {
+                var sum = 0;
+                for(var i = d[0]; i <= d[1]; i++) {
+                    sum += i;
+                }
+                return sum;
+            }).then(function(results) {
+                console.log(results.reduce(function(a,b){return a+b;}));
+            });
         </script>
     </body>
 </html>

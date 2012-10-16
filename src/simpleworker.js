@@ -36,6 +36,25 @@
     function Deferred() {
     }
     
+    Deferred.join = function(promises) {
+        var deferred = new Deferred();
+        var count = promises.length;
+        var results = [];
+        for(var i = 0; i < count; i++) {
+            (function(i) {
+                promises[i].then(function(ret) {
+                    results[i] = ret;
+                    if (--count === 0) {
+                        deferred.resolve(results);
+                    }
+                }, function(err) {
+                    deferred.reject(err);
+                });
+            }(i));
+        }
+        return deferred;
+    };
+    
     Deferred.prototype = {
         status: 0,  // 0: undecided, 1: resolved, 2: rejected, 3: fired
         reject: function (err) {
@@ -75,7 +94,6 @@
     };
     
     function $worker(func, params, async) {
-        var count = 0;
         var deferred = new Deferred();
         var w = new Worker(bbURL);
         w.postMessage({func: func.toString(), params: params, async: async});
@@ -90,6 +108,15 @@
         return deferred;
     }
     
+    function $map(data, func, async) {
+        var promises = data.map(function(d, i) {
+            return $worker(func, [d, i], async);
+        });
+        
+        return Deferred.join(promises);
+    }
+    
     global.$worker = $worker;
+    global.$map = $map;
     
 }(self));
