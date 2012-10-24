@@ -1,8 +1,7 @@
-SimpleWorker
-============
+# SimpleWorker
 
 Usage
-
+```javascript
       $worker(function(from, to) { // function to run on worker
         // your logic here
 		var sum = 0;
@@ -13,3 +12,4 @@ Usage
       }, [1, 100], function(result) {
 		alert(result);	// result is identical to sum above
       });
+```
