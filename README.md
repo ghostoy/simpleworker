@@ -1,5 +1,7 @@
 # SimpleWorker
 
+SimpleWorker is a wrapper for HTML5 WebWorker. You just write a function, and the library makes it run in another thread. The return value will be correctly passed back to browser thread, and asynchronized functions are also supported.
+
 ## Usage
 ### $worker (workerFunction, parameters, async)
 
