@@ -35,7 +35,7 @@ $worker(function(s) {
 });
 ```
 
-### $map (arrayData, workerFunction, async)
+### $map (arrayData, workerFunction)
 
 ```javascript
 $map([1, 2, 3, 4], function(data, index) {  // the data and index of each item in the arrayData are passed as parameters to workerFunction

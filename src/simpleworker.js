@@ -1,5 +1,8 @@
 (function (global) {
     'use strict';
+
+    var PA = global.ParallelArray;
+    var Timer = global.setImmediate || function (f){ global.setTimeout(f,0);};
     
     var code = 'onmessage = function(e) {\
         var func = e.data.func;\
@@ -17,6 +20,12 @@
             }\
         };\
         \
+        var console = {\
+            log: function () {\
+                postMessage({log: Array.prototype.slice.call(arguments)});\
+            }\
+        };\
+        \
         try{\
             var f = eval("(" + func + ")");\
             var ret = f.apply(self, params);\
@@ -25,7 +34,7 @@
                 deferred.resolve(ret);\
             }\
         } catch (e) {\
-            deferred.reject(e);\
+            deferred.reject(e.toString());\
         }\
     }';
     
@@ -75,8 +84,8 @@
             if (this.status !== 3) {
                 this._resolvedHandler = resolvedHandler || this._resolvedHandler;
                 this._rejectedHandler = rejectedHandler || this._rejectedHandler;
-                this._fire();
                 this._deferred = new Deferred();
+                this._fire();
                 return this._deferred;
             }
         },
@@ -88,7 +97,7 @@
             } else if (this.status === 2 && this._rejectedHandler) {
                 this.status = 3;
                 var ret = this._rejectedHandler(this._err);
-                this._deferred.resolve(ret);
+                this._deferred.reject(ret);
             }
         }
     };
@@ -100,23 +109,88 @@
         w.onmessage = function(e) {
             if (e.data.err) {
                 deferred.reject(e.data.err);
-            } else {
+            } else if (e.data.ret) {
                 deferred.resolve(e.data.ret);
+            } else {
+                console.log.apply(console, e.data.log);
             }
         };
         
         return deferred;
     }
     
-    function $map(data, func, async) {
-        var promises = data.map(function(d, i) {
-            return $worker(func, [d, i], async);
-        });
-        
-        return Deferred.join(promises);
+    function $map(data, func) {
+        if (PA && global.$disablePA) console.warn('ParallelArray is explicitly disabled by user. Set $disablePA to false to enable ParallelArray.');
+        if (PA && !global.$disablePA) {
+            var deferred = new Deferred();
+            var pa = new PA(data);
+            var ret = pa.map(func).buffer;
+            deferred.resolve(ret);
+            return deferred;
+        } else {
+            var $maxWorkers = global.$maxWorkers > 1 ? global.$maxWorkers : 4;
+            var length = data.length;
+            var step = Math.ceil(length / $maxWorkers);
+            var offset = 0;
+            var promises = [];
+            var funcString = func.toString();
+            funcString = funcString.replace(/^function [^(]*/, 'function func');
+            var type = Object.prototype.toString.call(data);
+            type = type.substring(8, type.length - 1);
+            if (type !== 'Array') { // for typed array use asm.js
+                do {
+                    var input = Array.prototype.slice.call(data, offset, offset + step);
+                    var l = input.length;
+                    var f = ['function (data) {',
+                        'function asmModule(stdlib, foreign, heap) {',
+                            '"use asm";',
+                            'var input = new stdlib.' + type + '(heap);',
+                            funcString,
+                            'function map() {',
+                                'var i = 0;',
+                                'for(; (i|0) < ' + l + '; i = ((i|0) + 1)|0) {',
+                                    'input[((i + ' + l + ')<<2) >> 2] = func(input[(i<<2)>>2]|0, ((i|0) + ' + offset + ')|0) | 0;',
+                                '}',
+                            '}',
+                            'return {map: map};',
+                        '}',
+                        '',
+                        'var half = ' + l + ' * ' + type + '.BYTES_PER_ELEMENT;',
+                        'var ab = new ArrayBuffer(1 << Math.ceil(Math.log(half * 2) / Math.log(2)));',
+                        'var ta = new ' + type + '(ab, 0, ' + l + ');',
+                        'ta.set(data);',
+                        'asmModule(self, {}, ab).map();',
+                        'var ret = new ' + type + '(ab, half, ' + l + ');',
+                        'return Array.prototype.slice.call(ret);',
+                    '}'].join('\n');
+                    //console.log(f);
+                    var promise = $worker(f, [input]);
+                    promises.push(promise);
+                    offset += step;
+                } while (offset < length);
+                return Deferred.join(promises).then(function(results) {
+                    return results.reduce(function (a, b) {
+                        return a.concat(b);
+                    });
+                });
+            } else {
+                do {
+                    var f = 'function (data) {' + funcString + '; return data.map(function (d, i) {return func(d, i + ' + offset + ')});}';
+                    var promise = $worker(f, [data.slice(offset, offset + step)]);
+                    promises.push(promise);
+                    offset += step;
+                } while (offset < length);
+                return Deferred.join(promises).then(function(results) {
+                    return results.reduce(function (a, b) {
+                        return a.concat(b);
+                    });
+                });
+            }
+        }
     }
     
     global.$worker = $worker;
     global.$map = $map;
     
 }(self));
+
