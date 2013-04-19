@@ -1,3 +1,8 @@
+/**
+ * SimpleWorker a multithreading library for JavaScript
+ *
+ * @author Cong Liu <cong.liux@gmail.com>
+ **/
 (function (global) {
     'use strict';
 
@@ -123,7 +128,7 @@
         if (PA && global.$disablePA) console.warn('ParallelArray is explicitly disabled by user. Set $disablePA to false to enable ParallelArray.');
         if (PA && !global.$disablePA) {
             var deferred = new Deferred();
-            var pa = new PA(data);
+            var pa = data instanceof PA ? data : new PA(data);
             var ret = pa.map(func).buffer;
             deferred.resolve(ret);
             return deferred;

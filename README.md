@@ -1,6 +1,6 @@
 # SimpleWorker
 
-SimpleWorker is a wrapper for HTML5 WebWorker. You just write a function, and the library makes it run in another thread. The return value will be correctly passed back to browser thread, and asynchronized functions are also supported.
+SimpleWorker is a multithread library based on HTML5 WebWorkers, ParallelArray and asm.js. You just write a function, and the library makes it run in another thread. The return value will be correctly passed back to browser thread, and asynchronized functions are also supported.
 
 # Why WebWorker is better?
 
@@ -36,6 +36,11 @@ $worker(function(s) {
 ```
 
 ### $map (arrayData, workerFunction)
+Utility function for map operations.
+* `arrayData` (mixed) The data to be mapped with. Accepted types are: `Array`, `ArrayBufferView`, `ParallelArray`. Underlying speed up methods will be benifit from following specs:
+ 1. [ParallelArray](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)
+ 1. [asm.js](http://asmjs.org/)
+* `workerFunction` (function) The map function (`workerFunction(data, index)`).
 
 ```javascript
 $map([1, 2, 3, 4], function(data, index) {  // the data and index of each item in the arrayData are passed as parameters to workerFunction
