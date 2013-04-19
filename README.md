@@ -1,12 +1,12 @@
 # SimpleWorker
 
-SimpleWorker is a multithread library based on HTML5 WebWorkers, ParallelArray and asm.js. You just write a function, and the library makes it run in another thread. The return value will be correctly passed back to browser thread, and asynchronized functions are also supported.
+SimpleWorker is a multithread library based on HTML5 WebWorkers, ParallelArray and asm.js. Threads are created on the fly without a separate file. If your browser support multiple speed up specs, such as ParallelArray or asm.js, SimpleWorker will benifit from them automatically.
 
 # Why SimpleWorker
 
 See [this test on jsperf.com](http://jsperf.com/webworker-vs-single-thread/7)
 
-See [experimental Asm.js & ParallelArray speed up](http://jsperf.com/simpleworker) (open with your latest Firefox nightly)
+See [experimental Asm.js & ParallelArray speed up](http://jsperf.com/simpleworker) (**open with your latest Firefox nightly**)
 
 ## Usage
 ### $worker (workerFunction, parameters, async)
