@@ -143,8 +143,10 @@
             var type = Object.prototype.toString.call(data);
             type = type.substring(8, type.length - 1);
             if (type !== 'Array') { // for typed array use asm.js
+				var Type = global[type];
+				var BYTES_PER_ELEMENT = Type.BYTES_PER_ELEMENT;
                 do {
-                    var input = Array.prototype.slice.call(data, offset, offset + step);
+                    var input = new Type(data.buffer, offset * BYTES_PER_ELEMENT, step);
                     var l = input.length;
                     var f = ['function (data) {',
                         'function asmModule(stdlib, foreign, heap) {',
@@ -160,13 +162,13 @@
                             'return {map: map};',
                         '}',
                         '',
-                        'var half = ' + l + ' * ' + type + '.BYTES_PER_ELEMENT;',
+                        'var half = ' + l * BYTES_PER_ELEMENT,
                         'var ab = new ArrayBuffer(1 << Math.ceil(Math.log(half * 2) / Math.log(2)));',
                         'var ta = new ' + type + '(ab, 0, ' + l + ');',
                         'ta.set(data);',
                         'asmModule(self, {}, ab).map();',
                         'var ret = new ' + type + '(ab, half, ' + l + ');',
-                        'return Array.prototype.slice.call(ret);',
+                        'return ret;',
                     '}'].join('\n');
                     //console.log(f);
                     var promise = $worker(f, [input]);
@@ -174,9 +176,12 @@
                     offset += step;
                 } while (offset < length);
                 return Deferred.join(promises).then(function(results) {
-                    return results.reduce(function (a, b) {
-                        return a.concat(b);
-                    });
+					var ta = new Type(length);
+					for(var i = 0; i < results.length; i++) {
+						var result = results[i];
+						ta.set(result, step * i);
+					}
+					return ta;
                 });
             } else {
                 do {
